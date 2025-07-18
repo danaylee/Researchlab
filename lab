@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UX Research Lab - Project Showcase</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        #dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+        }
+        
+        #dialogue-box h3 {
+            margin: 0 0 10px 0;
+            color: #1877F2;
+        }
+        
+        #dialogue-content {
+            margin: 10px 0;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .dialogue-option {
+            background: #f0f0f0;
+            border: 2px solid #1877F2;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .dialogue-option:hover {
+            background: #1877F2;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        #custom-question-container {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        #custom-question-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #1877F2;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        
+        #custom-question-submit {
+            background: #1877F2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        #custom-question-submit:hover {
+            background: #166fe5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #custom-question-submit:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(24, 119, 242, 0.3);
+            border-radius: 50%;
+            border-top-color: #1877F2;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .instruction {
+            opacity: 0.8;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        #interaction-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .floating-text {
+            position: absolute;
+            color: #ff0;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 2s ease-out forwards;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-100px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-overlay">
+        <h2 id="title">UX Research Lab</h2>
+        <p style="font-size: 20px;" id="subtitle">🔬 Project Showcase</p>
+        <p id="move-instruction">Use WASD to move around</p>
+        <p id="look-instruction">Arrow keys or mouse to look left/right</p>
+        <p id="interact-instruction">Press E to interact</p>
+        <p id="dance-instruction">Press SPACE to dance</p>
+        <p id="close-instruction">Press ESC to close dialogs/release mouse</p>
+        <p class="instruction" style="margin-top: 10px;" id="tip-instruction">💡 Ask about research methods and insights!</p>
+    </div>
+    
+    <div id="dialogue-box">
+        <h3 id="dialogue-name">Name</h3>
+        <div id="dialogue-content">Content</div>
+        <div id="dialogue-options"></div>
+        <div id="custom-question-container">
+            <p style="margin: 5px 0; font-size: 14px; opacity: 0.8; text-align: center;" id="custom-question-divider">━━━ Or ask your own question ━━━</p>
+            <input type="text" id="custom-question-input" placeholder="Ask about research methods, challenges, insights..." maxlength="200">
+            <button id="custom-question-submit">Ask Question</button>
+        </div>
+    </div>
+    
+    <div id="interaction-prompt"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf5f5f5);
+        scene.fog = new THREE.Fog(0xf5f5f5, 10, 50);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.6, 5);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        // Floating text effect
+        function createFloatingText(text, worldPos) {
+            const screenPos = worldPos.clone();
+            screenPos.project(camera);
+            
+            const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+            
+            const div = document.createElement('div');
+            div.className = 'floating-text';
+            div.textContent = text;
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            document.body.appendChild(div);
+            
+            setTimeout(() => div.remove(), 2000);
+        }
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 15, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -30;
+        directionalLight.shadow.camera.right = 30;
+        directionalLight.shadow.camera.top = 30;
+        directionalLight.shadow.camera.bottom = -30;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        // Floor with pattern
+        const floorGeometry = new THREE.PlaneGeometry(40, 40);
+        const floorMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xdcdcdc,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        
+        // Add floor tiles pattern
+        const tileGeometry = new THREE.PlaneGeometry(2, 2);
+        const tileMaterial1 = new THREE.MeshStandardMaterial({ color: 0xe8e8e8 });
+        const tileMaterial2 = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
+        
+        for (let x = -20; x < 20; x += 2) {
+            for (let z = -20; z < 20; z += 2) {
+                const tile = new THREE.Mesh(tileGeometry, ((x + z) / 2) % 2 === 0 ? tileMaterial1 : tileMaterial2);
+                tile.position.set(x + 1, 0.01, z + 1);
+                tile.rotation.x = -Math.PI / 2;
+                tile.receiveShadow = true;
+                scene.add(tile);
+            }
+        }
+        
+        // Walls with windows
+        const wallMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xf8f8f8,
+            roughness: 0.9
+        });
+        
+        const windowMaterial = new THREE.MeshStandardMaterial({
+            color: 0x87ceeb,
+            transparent: true,
+            opacity: 0.3,
+            roughness: 0.1,
+            metalness: 0.5
+        });
+        
+        // Back wall with windows
+        const backWall = new THREE.Mesh(
+            new THREE.PlaneGeometry(40, 10),
+            wallMaterial
+        );
+        backWall.position.set(0, 5, -20);
+        backWall.receiveShadow = true;
+        scene.add(backWall);
+        
+        // Add windows to back wall
+        for (let x = -15; x <= 15; x += 10) {
+            const window = new THREE.Mesh(
+                new THREE.PlaneGeometry(4, 3),
+                windowMaterial
+            );
+            window.position.set(x, 5, -19.9);
+            scene.add(window);
+        }
+        
+        // Side walls
+        const leftWall = new THREE.Mesh(
+            new THREE.PlaneGeometry(40, 10),
+            wallMaterial
+        );
+        leftWall.position.set(-20, 5, 0);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.receiveShadow = true;
+        scene.add(leftWall);
+        
+        const rightWall = new THREE.Mesh(
+            new THREE.PlaneGeometry(40, 10),
+            wallMaterial
+        );
+        rightWall.position.set(20, 5, 0);
+        rightWall.rotation.y = -Math.PI / 2;
+        rightWall.receiveShadow = true;
+        scene.add(rightWall);
+        
+        // Office furniture
+        const woodMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x8b6914,
+            roughness: 0.6,
+            metalness: 0.1
+        });
+        
+        const metalMaterial = new THREE.MeshStandardMaterial({
+            color: 0x404040,
+            roughness: 0.3,
+            metalness: 0.8
+        });
+        
+        // Create detailed desks
+        function createDesk(x, z) {
+            const deskGroup = new THREE.Group();
+            
+            // Desk top
+            const deskTop = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 0.1, 1.5),
+                woodMaterial
+            );
+            deskTop.position.y = 0.75;
+            deskTop.castShadow = true;
+            deskTop.receiveShadow = true;
+            deskGroup.add(deskTop);
+            
+            // Metal frame
+            const frameGeometry = new THREE.BoxGeometry(0.05, 0.7, 0.05);
+            const framePositions = [
+                [-1.45, 0.35, -0.7],
+                [1.45, 0.35, -0.7],
+                [-1.45, 0.35, 0.7],
+                [1.45, 0.35, 0.7]
+            ];
+            
+            framePositions.forEach(pos => {
+                const frame = new THREE.Mesh(frameGeometry, metalMaterial);
+                frame.position.set(...pos);
+                frame.castShadow = true;
+                deskGroup.add(frame);
+            });
+            
+            // Computer monitor
+            const monitorBase = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16),
+                metalMaterial
+            );
+            monitorBase.position.set(0, 0.82, 0);
+            deskGroup.add(monitorBase);
+            
+            const monitorStand = new THREE.Mesh(
+                new THREE.BoxGeometry(0.05, 0.3, 0.05),
+                metalMaterial
+            );
+            monitorStand.position.set(0, 0.95, 0);
+            deskGroup.add(monitorStand);
+            
+            const monitorScreen = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 0.7, 0.05),
+                new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1, metalness: 0.5 })
+            );
+            monitorScreen.position.set(0, 1.3, 0);
+            deskGroup.add(monitorScreen);
+            
+            // Keyboard
+            const keyboard = new THREE.Mesh(
+                new THREE.BoxGeometry(0.4, 0.02, 0.15),
+                metalMaterial
+            );
+            keyboard.position.set(0, 0.81, 0.3);
+            deskGroup.add(keyboard);
+            
+            // Chair
+            const chairSeat = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.05, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x333333 })
+            );
+            chairSeat.position.set(0, 0.5, 0.8);
+            deskGroup.add(chairSeat);
+            
+            const chairBack = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.6, 0.05),
+                new THREE.MeshStandardMaterial({ color: 0x333333 })
+            );
+            chairBack.position.set(0, 0.8, 1.02);
+            deskGroup.add(chairBack);
+            
+            // Random desk items
+            if (Math.random() > 0.5) {
+                // Coffee mug
+                const mug = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.08, 0.1, 8),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff })
+                );
+                mug.position.set(Math.random() * 0.5 - 0.25, 0.85, Math.random() * 0.3);
+                deskGroup.add(mug);
+            }
+            
+            deskGroup.position.set(x, 0, z);
+            return deskGroup;
+        }
+        
+        // Add desks for researchers
+        const desk1 = createDesk(-10, -10);
+        const desk2 = createDesk(0, -10);
+        const desk3 = createDesk(10, -10);
+        const desk4 = createDesk(-10, 5);
+        const desk5 = createDesk(0, 5);
+        const desk6 = createDesk(10, 5);
+        scene.add(desk1, desk2, desk3, desk4, desk5, desk6);
+        
+        // Add whiteboard
+        const whiteboardMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        
+        const whiteboard = new THREE.Mesh(
+            new THREE.BoxGeometry(4, 2, 0.1),
+            whiteboardMaterial
+        );
+        whiteboard.position.set(0, 3, -19.8);
+        whiteboard.castShadow = true;
+        scene.add(whiteboard);
+        
+        // Research equipment
+        const screenMaterial = new THREE.MeshStandardMaterial({ color: 0x4169e1 });
+        const testDevice = new THREE.Mesh(
+            new THREE.BoxGeometry(0.4, 0.2, 0.1),
+            screenMaterial
+        );
+        testDevice.position.set(5, 0.1, 5);
+        testDevice.userData = { velocity: new THREE.Vector3(0.02, 0, 0.02) };
+        scene.add(testDevice);
+        
+        // Plant decorations
+        const plantPot = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.25, 0.4, 8),
+            new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+        );
+        plantPot.position.set(-15, 0.2, -15);
+        scene.add(plantPot);
+        
+        const plantLeaves = new THREE.Mesh(
+            new THREE.SphereGeometry(0.6, 6, 5),
+            new THREE.MeshStandardMaterial({ color: 0x228b22 })
+        );
+        plantLeaves.position.set(-15, 0.8, -15);
+        scene.add(plantLeaves);
+        
+        // Add more plants
+        const plantPot2 = plantPot.clone();
+        plantPot2.position.set(15, 0.2, -15);
+        scene.add(plantPot2);
+        
+        const plantLeaves2 = plantLeaves.clone();
+        plantLeaves2.position.set(15, 0.8, -15);
+        scene.add(plantLeaves2);
+        
+        const plantPot3 = plantPot.clone();
+        plantPot3.position.set(0, 0.2, 15);
+        scene.add(plantPot3);
+        
+        const plantLeaves3 = plantLeaves.clone();
+        plantLeaves3.position.set(0, 0.8, 15);
+        scene.add(plantLeaves3);
+        
+        // Add coffee station
+        const coffeeTable = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 0.8, 1),
+            woodMaterial
+        );
+        coffeeTable.position.set(-18, 0.4, 10);
+        coffeeTable.castShadow = true;
+        scene.add(coffeeTable);
+        
+        const coffeeMachine = new THREE.Mesh(
+            new THREE.BoxGeometry(0.4, 0.5, 0.3),
+            metalMaterial
+        );
+        coffeeMachine.position.set(-18, 1.05, 10);
+        scene.add(coffeeMachine);
+        
+        // Character creation with more detail
+        const characters = [];
+        
+        function createCharacter(name, role, x, z, shirtColor, characterData) {
+            const group = new THREE.Group();
+            
+            // Torso
+            const torsoGeometry = new THREE.CylinderGeometry(0.25, 0.3, 0.8, 8);
+            const torsoMaterial = new THREE.MeshStandardMaterial({ color: shirtColor });
+            const torso = new THREE.Mesh(torsoGeometry, torsoMaterial);
+            torso.position.y = 0.6;
+            torso.castShadow = true;
+            group.add(torso);
+            
+            // Arms
+            const armGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 6);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: shirtColor });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.3, 0.7, 0);
+            leftArm.rotation.z = Math.PI / 8;
+            group.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.3, 0.7, 0);
+            rightArm.rotation.z = -Math.PI / 8;
+            group.add(rightArm);
+            
+            // Legs
+            const legGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+            const legMaterial = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.15, 0.4, 0);
+            group.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.15, 0.4, 0);
+            group.add(rightLeg);
+            
+            // Head
+            const headGeometry = new THREE.SphereGeometry(0.25, 8, 6);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.25;
+            head.castShadow = true;
+            group.add(head);
+            
+            // Hair
+            const hairGeometry = new THREE.SphereGeometry(0.27, 8, 6);
+            const hairMaterial = new THREE.MeshStandardMaterial({ color: characterData.hairColor });
+            const hair = new THREE.Mesh(hairGeometry, hairMaterial);
+            hair.position.y = 1.35;
+            hair.scale.y = 0.6;
+            group.add(hair);
+            
+            // Eyes
+            const eyeGeometry = new THREE.SphereGeometry(0.03, 4, 4);
+            const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.08, 1.25, 0.22);
+            group.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.08, 1.25, 0.22);
+            group.add(rightEye);
+            
+            // Name label
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            context.fillRect(0, 0, 256, 64);
+            context.fillStyle = 'black';
+            context.font = 'bold 20px Arial';
+            context.textAlign = 'center';
+            context.fillText(name, 128, 25);
+            context.font = '16px Arial';
+            context.fillStyle = '#666';
+            context.fillText(role, 128, 45);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+            const label = new THREE.Sprite(labelMaterial);
+            label.position.y = 1.8;
+            label.scale.set(2, 0.5, 1);
+            group.add(label);
+            
+            group.position.set(x, 0, z);
+            group.userData = { 
+                name, 
+                role, 
+                conversations: [],
+                initialPosition: new THREE.Vector3(x, 0, z),
+                targetPosition: new THREE.Vector3(x, 0, z),
+                moveTimer: 0,
+                isDancing: false,
+                tripChance: 0.001,
+                leftArm: leftArm,
+                rightArm: rightArm,
+                ...characterData
+            };
+            
+            characters.push(group);
+            return group;
+        }
+        
+        // Add your research team
+        const dana = createCharacter('Dana', 'AR Dictation Expert', -10, -5, 0x4169e1, {
+            hairColor: 0x3d3d3d,
+            project: 'AR Dictation Corrections',
+            personality: 'meticulous and user-focused',
+            quirk: 'maps every dictation failure like it\'s a conversation topology'
+        });
+        
+        const dananana = createCharacter('Dananana', 'Ambient UX Researcher', 10, -5, 0x9370db, {
+            hairColor: 0x4b0082,
+            project: 'Ambient Messaging Workflows',
+            personality: 'exploratory and hands-on',
+            quirk: 'prototypes with acetate sheets and calls it "wizard-of-oz reality"'
+        });
+        
+        const banana = createCharacter('Banana', 'AI Infra Specialist', -10, 5, 0x228b22, {
+            hairColor: 0x8b4513,
+            project: 'AI Model Evaluation Tools',
+            personality: 'systematic and empathetic',
+            quirk: 'runs "Engineer Diary" programs and treats code like anthropology'
+        });
+        
+        const dlee = createCharacter('DLee', 'GPT Collaboration Analyst', 10, 5, 0xffa500, {
+            hairColor: 0x8b4513,
+            project: 'GPT Collaboration Patterns',
+            personality: 'experimental and methodical',
+            quirk: 'tested 60+ prompt variations and has strong opinions about temperature settings'
+        });
+        
+        const deedee = createCharacter('Deedee', 'Voice UI Pioneer', -5, 0, 0xff6347, {
+            hairColor: 0xd2691e,
+            project: 'Voice-First Design Systems',
+            personality: 'innovative and accessibility-focused',
+            quirk: 'designs entire interfaces that work without screens - just sound and haptics'
+        });
+        
+        const danes = createCharacter('Danes', 'XR Research Ops', 5, 0, 0x20b2aa, {
+            hairColor: 0x2f4f4f,
+            project: 'Mixed Reality Lab Infrastructure',
+            personality: 'organized and detail-oriented',
+            quirk: 'built a home-style lab setup and optimizes research workflows like code'
+        });
+        
+        scene.add(dana, dananana, banana, dlee, deedee, danes);
+        
+        // Player controls
+        const player = {
+            position: new THREE.Vector3(0, 1.6, 5),
+            velocity: new THREE.Vector3(0, 0, 0),
+            speed: 0.1,
+            isDancing: false
+        };
+        
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement === document.getElementById('custom-question-input')) {
+                if (e.key === 'Escape') {
+                    document.getElementById('dialogue-box').style.display = 'none';
+                    currentCharacter = null;
+                    if (document.pointerLockElement === renderer.domElement) {
+                        document.exitPointerLock();
+                    }
+                }
+                return;
+            }
+            
+            keys[e.key.toLowerCase()] = true;
+            keys[e.key] = true;
+            
+            if (e.key.toLowerCase() === 'e' && nearbyCharacter && document.getElementById('dialogue-box').style.display !== 'block') {
+                e.preventDefault();
+                openDialogue(nearbyCharacter);
+            }
+            
+            if (e.key === ' ' && document.getElementById('dialogue-box').style.display !== 'block') {
+                e.preventDefault();
+                player.isDancing = true;
+                createFloatingText('💃🕺', player.position);
+            }
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (document.activeElement === document.getElementById('custom-question-input')) {
+                return;
+            }
+            
+            keys[e.key.toLowerCase()] = false;
+            keys[e.key] = false;
+            
+            if (e.key === ' ' && document.getElementById('dialogue-box').style.display !== 'block') {
+                player.isDancing = false;
+            }
+        });
+        
+        // Character movement AI
+        function updateCharacterMovement(character, deltaTime) {
+            if (Math.random() < character.userData.tripChance && !character.userData.isDancing) {
+                character.rotation.x = Math.PI / 4;
+                character.position.y = 0.3;
+                createFloatingText('Oof!', character.position);
+                
+                setTimeout(() => {
+                    character.rotation.x = 0;
+                    character.position.y = 0;
+                }, 1000);
+                
+                character.userData.tripChance = 0;
+                setTimeout(() => {
+                    character.userData.tripChance = 0.001;
+                }, 5000);
+            }
+            
+            if (character === currentCharacter || character.userData.isDancing) {
+                if (character === currentCharacter) {
+                    const lookTarget = new THREE.Vector3(player.position.x, character.position.y, player.position.z);
+                    character.lookAt(lookTarget);
+                    character.rotation.x = 0;
+                    character.rotation.z = 0;
+                }
+                return;
+            }
+            
+            if (Math.random() < 0.001) {
+                character.userData.isDancing = true;
+                createFloatingText('🎵', character.position);
+                setTimeout(() => {
+                    character.userData.isDancing = false;
+                }, 3000);
+            }
+            
+            character.userData.moveTimer -= deltaTime;
+            
+            if (character.userData.moveTimer <= 0) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 3 + Math.random() * 5;
+                character.userData.targetPosition = new THREE.Vector3(
+                    character.userData.initialPosition.x + Math.cos(angle) * distance,
+                    0,
+                    character.userData.initialPosition.z + Math.sin(angle) * distance
+                );
+                
+                character.userData.targetPosition.x = Math.max(-18, Math.min(18, character.userData.targetPosition.x));
+                character.userData.targetPosition.z = Math.max(-18, Math.min(18, character.userData.targetPosition.z));
+                
+                character.userData.moveTimer = 5 + Math.random() * 5;
+            }
+            
+            const direction = new THREE.Vector3().subVectors(character.userData.targetPosition, character.position);
+            direction.y = 0;
+            const distance = direction.length();
+            
+            if (distance > 0.1) {
+                direction.normalize();
+                character.position.add(direction.multiplyScalar(0.02));
+                
+                character.lookAt(character.userData.targetPosition);
+                character.rotation.x = 0;
+                character.rotation.z = 0;
+                
+                if (!character.userData.isDancing) {
+                    character.position.y = Math.abs(Math.sin(Date.now() * 0.005)) * 0.05;
+                }
+            }
+        }
+        
+        // Dialogue system for your projects
+        const dialogueBox = document.getElementById('dialogue-box');
+        const dialogueName = document.getElementById('dialogue-name');
+        const dialogueContent = document.getElementById('dialogue-content');
+        const dialogueOptions = document.getElementById('dialogue-options');
+        const interactionPrompt = document.getElementById('interaction-prompt');
+        
+        let currentCharacter = null;
+        let nearbyCharacter = null;
+        
+        function generateDialogueOptions(character) {
+            const projectQuestions = {
+                'Dana': [
+                    "How did you map dictation failure modes?",
+                    "What was the biggest challenge with voice corrections?",
+                    "Tell me about the ambiguity framing process",
+                    "How did mixed-method evaluation work?"
+                ],
+                'Dananana': [
+                    "What's it like designing for transparent lenses?",
+                    "How did acetate overlays help with prototyping?",
+                    "What were the 5 UX principles you discovered?",
+                    "How do you test AR messaging in a home environment?"
+                ],
+                'Banana': [
+                    "What's the Engineer Diary program about?",
+                    "How do you make ML behavior patterns visible?",
+                    "What friction points did you uncover?",
+                    "Tell me about those D3-powered visualizations"
+                ],
+                'DLee': [
+                    "Why did you test 60+ prompt variations?",
+                    "What are the three major collaboration breakdowns?",
+                    "How do temperature settings affect trust?",
+                    "What's your favorite system message strategy?"
+                ],
+                'Deedee': [
+                    "How do you design interfaces without screens?",
+                    "What role does haptic feedback play?",
+                    "How do you test voice-first experiences?",
+                    "What accessibility insights have you discovered?"
+                ],
+                'Danes': [
+                    "How do you optimize research workflows?",
+                    "What makes a good mixed reality lab setup?",
+                    "How do you handle XR equipment logistics?",
+                    "What's your approach to research operations?"
+                ]
+            };
+            
+            return projectQuestions[character.userData.name] || [
+                "Tell me about your research approach",
+                "What's the most interesting insight you've found?",
+                "How do you handle research challenges?",
+                "What methodologies do you use?"
+            ];
+        }
+        
+        function openDialogue(character) {
+            currentCharacter = character;
+            dialogueBox.style.display = 'block';
+            dialogueName.textContent = `${character.userData.name} - ${character.userData.role}`;
+            
+            if (document.pointerLockElement === renderer.domElement) {
+                document.exitPointerLock();
+            }
+            
+            const greetings = [
+                `Hey! I'm ${character.userData.name}, working on ${character.userData.project}. ${character.userData.quirk}!`,
+                `Hi there! I lead research on ${character.userData.project}. Want to hear about some fascinating user insights?`,
+                `${character.userData.name} here! I'm deep in ${character.userData.project} research. ${character.userData.quirk}, as usual.`,
+                `Great to meet you! I'm researching ${character.userData.project}. Fair warning: I ${character.userData.quirk}.`
+            ];
+            
+            if (character.userData.conversations.length === 0) {
+                dialogueContent.innerHTML = `<p><strong>${character.userData.name}:</strong> ${greetings[Math.floor(Math.random() * greetings.length)]}</p>`;
+            } else {
+                const lastConv = character.userData.conversations[character.userData.conversations.length - 1];
+                dialogueContent.innerHTML = `<p><strong>You:</strong> ${lastConv.user}</p><p><strong>${character.userData.name}:</strong> ${lastConv.response}</p>`;
+            }
+            
+            const options = generateDialogueOptions(character);
+            dialogueOptions.innerHTML = '';
+            
+            options.forEach(option => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'dialogue-option';
+                optionDiv.textContent = option;
+                optionDiv.onclick = () => selectOption(option);
+                dialogueOptions.appendChild(optionDiv);
+            });
+            
+            document.getElementById('custom-question-input').value = '';
+            
+            setTimeout(() => {
+                document.getElementById('custom-question-input').focus();
+            }, 100);
+        }
+        
+        async function selectOption(option) {
+            if (!currentCharacter) return;
+            
+            dialogueContent.innerHTML += `<p><strong>You:</strong> ${option}</p>`;
+            dialogueContent.innerHTML += `<p><strong>${currentCharacter.userData.name}:</strong> <span class="loading"></span></p>`;
+            
+            dialogueContent.scrollTop = dialogueContent.scrollHeight;
+            
+            const customQuestionInput = document.getElementById('custom-question-input');
+            const customQuestionSubmit = document.getElementById('custom-question-submit');
+            
+            dialogueOptions.style.pointerEvents = 'none';
+            dialogueOptions.style.opacity = '0.5';
+            customQuestionInput.disabled = true;
+            customQuestionSubmit.disabled = true;
+            
+            let responseText = generateProjectResponse(currentCharacter, option);
+            
+            currentCharacter.userData.conversations.push({
+                user: option,
+                response: responseText
+            });
+            
+            dialogueContent.innerHTML = dialogueContent.innerHTML.replace(
+                '<span class="loading"></span>',
+                responseText
+            );
+            
+            dialogueContent.scrollTop = dialogueContent.scrollHeight;
+            
+            if (Math.random() < 0.2) {
+                createFloatingText('💡', currentCharacter.position);
+            }
+            
+            const newOptions = generateDialogueOptions(currentCharacter);
+            dialogueOptions.innerHTML = '';
+            
+            newOptions.forEach(opt => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'dialogue-option';
+                optionDiv.textContent = opt;
+                optionDiv.onclick = () => selectOption(opt);
+                dialogueOptions.appendChild(optionDiv);
+            });
+            
+            dialogueOptions.style.pointerEvents = 'auto';
+            dialogueOptions.style.opacity = '1';
+            customQuestionInput.disabled = false;
+            customQuestionSubmit.disabled = false;
+            customQuestionInput.focus();
+        }
+        
+        // Project-specific response generator
+        function generateProjectResponse(character, question) {
+            const responses = {
+                'Dana': {
+                    'failure': [
+                        "We brainstormed 8+ distinct failure cases with PM, design & engineering - entities, punctuation, homonyms, you name it. Then validated against historical error logs to see what actually breaks in the wild.",
+                        "Mapping failure modes was like being a detective! We'd find patterns in the logs where 'call me at 7' became 'call meat seven' and trace back why the model struggled with context."
+                    ],
+                    'challenge': [
+                        "The biggest challenge? Ambiguity framing! When someone says 'no wait, I meant the other John,' how do you teach AI which John they're referring to? Context is everything.",
+                        "Voice corrections are tricky because humans assume shared context. 'Change that to pm' - well, which 'that' and where exactly? We had to map all these implicit references."
+                    ],
+                    'method': [
+                        "Mixed-method evaluation was key - think-aloud interviews alongside hard metrics. We'd watch faces scrunch up in frustration, then correlate that to task completion times.",
+                        "I love combining qual and quant! Someone's micro-expression of confusion tells you as much as their 2.3x longer task time. Both data points matter."
+                    ],
+                    'ambiguity': [
+                        "Ambiguity framing meant cataloging every way corrections could be misunderstood. 'No, the other time' - other than what? We created a taxonomy of confusion.",
+                        "We literally sat in rooms going 'what if they say this? What about that?' It was like playing 20 questions with an AI that doesn't know it's playing."
+                    ],
+                    'default': [
+                        "AR dictation is fascinating because you're designing for interruption and recovery. People don't just dictate - they correct, they clarify, they change their minds mid-sentence!",
+                        "Working at Meta Reality Labs taught me that voice interfaces need to handle human messiness, not just perfect speech. Real conversations are full of 'um, actually, wait...'",
+                        "The coolest part? We delivered benchmarks that actually shaped model behavior. Research that changes the product - that's the dream!"
+                    ]
+                },
+                'Dananana': [
+                    "Designing for transparent lenses blew my mind! Traditional UI rules don't apply when your 'screen' is see-through and floating in space.",
+                    "Acetate overlays were genius - cheap prototyping for expensive problems. We'd tape clear sheets to glasses and suddenly everyone understood spatial UI.",
+                    "Those 5 UX principles? Glance-read vs hands-free input was the big one. How do you scan messages while cooking without burning dinner?",
+                    "Home environment testing revealed so much! People behave totally differently in their kitchen than in a sterile lab. Context is everything.",
+                    "Zero-to-one exploration is my favorite kind of research. No existing patterns, no best practices - just pure 'what if we tried this?'",
+                    "Unity mockups + wizard-of-oz = magic! Half digital prototype, half human behind the curtain making it feel real.",
+                    "The breakthrough was realizing ambient messaging isn't about notifications - it's about conversation flow that respects your attention."
+                ],
+                'Banana': [
+                    "Engineer Diary program was eye-opening! I'd shadow ML engineers and watch them debug models in real-time. So much hidden friction.",
+                    "Making behavior patterns visible meant turning abstract model outputs into D3 visualizations that actually made sense to humans.",
+                    "Biggest friction point? Model iteration cycles! Engineers would train for hours, then spend more hours figuring out what went wrong.",
+                    "Those D3 dashboards surfaced misalignment signals in real-time. Outlier error rates, prompt drift - all the stuff that's invisible in logs.",
+                    "Cross-functional empathy is underrated. I embedded with data scientists until I could think like them, then designed tools they actually wanted to use.",
+                    "Research ops at scale meant quarterly workshops, surveys, contextual inquiries - whatever it took to prioritize features by actual impact.",
+                    "AI infra tooling is like UX for machines AND humans. You're designing for both the algorithm and the person trying to understand it."
+                ],
+                'DLee': [
+                    "60+ prompt variations taught me that tiny changes have huge effects! Add 'think step by step' and suddenly GPT becomes 40% more reliable.",
+                    "Three major breakdowns: context loss, overconfidence hallucinations, and silent omissions. Each needs different UI solutions.",
+                    "Temperature settings are wild! 0.2 for factual stuff, 0.8 for creativity. But the sweet spot for collaboration? Around 0.5.",
+                    "System message strategies ranged from 'you are a helpful assistant' to detailed personas. The best ones set clear expectations upfront.",
+                    "GPT as design partner changed how I think about AI. It's not just a tool - it's a collaborator with its own quirks and failure modes.",
+                    "Mapping collaboration scaffolds meant finding patterns in what works. Hint prompts, uncertainty banners, explicit context tracking.",
+                    "The experimental matrix was 5 system messages × 4 user templates × 3 temperatures. Yeah, I'm that thorough with prompt engineering!"
+                ],
+                'Deedee': [
+                    "Designing without screens forces you to think in sound, haptics, and spatial audio. It's like sculpting with invisible materials!",
+                    "Haptic feedback becomes your visual design language. A gentle pulse means 'message received,' sharp tap means 'urgent.' Touch vocabulary!",
+                    "Testing voice-first means closing your eyes and living in the experience. If it doesn't work eyes-closed, it doesn't work.",
+                    "Accessibility insights? Voice-first design benefits everyone! Busy hands, low vision, driving - contexts where screens fail us all.",
+                    "Sound design principles from film apply beautifully to UI. Layering, spatial positioning, emotional tone - it's all there.",
+                    "The challenge is information hierarchy without visual cues. How do you create 'folders' and 'buttons' in pure audio space?",
+                    "Conversation design meets interaction design. Every interface becomes a dialogue, every feature becomes a conversation turn."
+                ],
+                'Danes': [
+                    "Research operations is like being a stage manager for discovery. Everything runs smoothly so researchers can focus on insights.",
+                    "Mixed reality lab setup means thinking 3D! Tracking volumes, lighting conditions, cable management - it's like building a holodeck.",
+                    "Equipment logistics for XR is wild. Headsets, hand tracking, eye tracking, spatial anchors - and it all has to 'just work' for participants.",
+                    "Workflow optimization applies software engineering principles to research. Version control for study protocols, CI/CD for participant recruitment!",
+                    "Home-style lab environment was game-changing. Real furniture, real lighting, real distractions. Authenticity over control.",
+                    "The secret sauce? Making complex research feel effortless for participants. They should focus on the experience, not the technology.",
+                    "Research ops scales insights! Good infrastructure means more studies, better data, faster iteration cycles. Multiply the impact."
+                ]
+            };
+            
+            const characterResponses = responses[character.userData.name] || [
+                "That's a fascinating research question! My work focuses on understanding how people really interact with emerging technology.",
+                "Great question! UX research is all about bridging the gap between what we think users want and what they actually need.",
+                `${character.userData.project} has taught me so much about human behavior in new contexts. Every study reveals surprises!`,
+                "I love digging into the 'why' behind user actions. Data tells you what happened, but research tells you why it matters."
+            ];
+            
+            let responseKey = 'default';
+            const questionLower = question.toLowerCase();
+            
+            if (questionLower.includes('failure') || questionLower.includes('error') || questionLower.includes('problem')) responseKey = 'failure';
+            else if (questionLower.includes('challenge') || questionLower.includes('difficult') || questionLower.includes('hard')) responseKey = 'challenge';
+            else if (questionLower.includes('method') || questionLower.includes('evaluation') || questionLower.includes('research')) responseKey = 'method';
+            else if (questionLower.includes('ambiguity') || questionLower.includes('framing')) responseKey = 'ambiguity';
+            
+            if (Array.isArray(characterResponses)) {
+                return characterResponses[Math.floor(Math.random() * characterResponses.length)];
+            } else {
+                const responseArray = characterResponses[responseKey] || characterResponses['default'] || [
+                    "That's an interesting research question! Let me think about how my project experience relates to that.",
+                    `Working on ${character.userData.project} has given me some unique insights about that topic.`
+                ];
+                return responseArray[Math.floor(Math.random() * responseArray.length)];
+            }
+        }
+        
+        // Close dialogue with Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dialogueBox.style.display = 'none';
+                currentCharacter = null;
+                if (document.pointerLockElement === renderer.domElement) {
+                    document.exitPointerLock();
+                }
+            }
+        });
+        
+        // Custom question handlers
+        document.getElementById('custom-question-submit').addEventListener('click', () => {
+            const customQuestion = document.getElementById('custom-question-input').value.trim();
+            if (customQuestion && currentCharacter) {
+                selectOption(customQuestion);
+                document.getElementById('custom-question-input').value = '';
+            }
+        });
+        
+        document.getElementById('custom-question-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const customQuestion = document.getElementById('custom-question-input').value.trim();
+                if (customQuestion && currentCharacter) {
+                    selectOption(customQuestion);
+                    document.getElementById('custom-question-input').value = '';
+                }
+            }
+        });
+        
+        // Animation loop
+        let lastTime = 0;
+        
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            player.velocity.set(0, 0, 0);
+            
+            if (!player.isDancing && dialogueBox.style.display !== 'block') {
+                if (keys['w']) player.velocity.z = player.speed;
+                if (keys['s']) player.velocity.z = -player.speed;
+                if (keys['a']) player.velocity.x = -player.speed;
+                if (keys['d']) player.velocity.x = player.speed;
+            }
+            
+            const lookSpeed = 0.05;
+            if (dialogueBox.style.display !== 'block') {
+                if (keys['ArrowLeft']) {
+                    mouseX += lookSpeed;
+                }
+                if (keys['ArrowRight']) {
+                    mouseX -= lookSpeed;
+                }
+            }
+            
+            if (!player.isDancing && dialogueBox.style.display !== 'block') {
+                camera.rotation.y = mouseX;
+                camera.rotation.x = 0;
+            }
+            
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
+            
+            const right = new THREE.Vector3(1, 0, 0);
+            right.applyQuaternion(camera.quaternion);
+            right.y = 0;
+            right.normalize();
+            
+            player.position.add(forward.multiplyScalar(player.velocity.z));
+            player.position.add(right.multiplyScalar(player.velocity.x));
+            
+            player.position.x = Math.max(-18, Math.min(18, player.position.x));
+            player.position.z = Math.max(-18, Math.min(18, player.position.z));
+            
+            if (player.isDancing && dialogueBox.style.display !== 'block') {
+                camera.position.y = player.position.y + Math.sin(Date.now() * 0.01) * 0.2;
+                camera.rotation.z = Math.sin(Date.now() * 0.01) * 0.1;
+                camera.rotation.y = mouseX;
+                camera.rotation.x = 0;
+            } else {
+                camera.position.copy(player.position);
+                camera.rotation.z = 0;
+                if (dialogueBox.style.display !== 'block') {
+                    camera.rotation.y = mouseX;
+                    camera.rotation.x = 0;
+                }
+            }
+            
+            characters.forEach(character => {
+                updateCharacterMovement(character, deltaTime);
+                
+                if (character.userData.isDancing) {
+                    character.rotation.y += 0.1;
+                    character.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 0.3;
+                    
+                    character.userData.leftArm.rotation.z = Math.sin(Date.now() * 0.01) * 0.5 + Math.PI / 8;
+                    character.userData.rightArm.rotation.z = -Math.sin(Date.now() * 0.01) * 0.5 - Math.PI / 8;
+                }
+            });
+            
+            testDevice.rotation.y += 0.05;
+            testDevice.position.add(testDevice.userData.velocity);
+            
+            if (Math.abs(testDevice.position.x) > 18 || Math.abs(testDevice.position.z) > 18) {
+                testDevice.userData.velocity.multiplyScalar(-1);
+                createFloatingText('Bonk!', testDevice.position);
+            }
+            
+            nearbyCharacter = null;
+            let minDistance = Infinity;
+            
+            characters.forEach(character => {
+                const distance = player.position.distanceTo(character.position);
+                if (distance < 3 && distance < minDistance) {
+                    minDistance = distance;
+                    nearbyCharacter = character;
+                }
+            });
+            
+            if (nearbyCharacter && !currentCharacter) {
+                interactionPrompt.style.display = 'block';
+                interactionPrompt.textContent = `Press E to talk to ${nearbyCharacter.userData.name}`;
+            } else {
+                interactionPrompt.style.display = 'none';
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === renderer.domElement && dialogueBox.style.display !== 'block') {
+                mouseX += e.movementX * 0.002;
+            }
+        });
+        
+        renderer.domElement.addEventListener('click', () => {
+            if (!dialogueBox.style.display || dialogueBox.style.display === 'none') {
+                renderer.domElement.requestPointerLock();
+            }
+        });
+        
+        animate(0);
+    </script>
+</body>
+</html>
